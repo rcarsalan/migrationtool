@@ -1,0 +1,197 @@
+[
+  {
+    "id": "4729aa93-64fe-450d-912a-4d1ec22da409",
+    "startedAt": "2026-05-21T15:22:17.843Z",
+    "status": "success",
+    "tasks": [
+      "products"
+    ],
+    "dryRun": false,
+    "endedAt": "2026-05-21T15:22:21.966Z",
+    "duration": 4,
+    "summary": {
+      "totalSuccess": 0,
+      "totalFailed": 1,
+      "byTask": {
+        "Products": {
+          "success": 0,
+          "failed": 1
+        }
+      }
+    }
+  },
+  {
+    "id": "8a8d5c8c-7c4b-45fa-8d56-781b879c10a3",
+    "startedAt": "2026-05-21T15:07:24.436Z",
+    "status": "success",
+    "tasks": [
+      "products"
+    ],
+    "dryRun": false,
+    "endedAt": "2026-05-21T15:07:41.135Z",
+    "duration": 17,
+    "summary": {
+      "totalSuccess": 0,
+      "totalFailed": 0,
+      "byTask": {}
+    }
+  },
+  {
+    "id": "d8abcee3-c55c-418f-83cd-a89f0fa52f10",
+    "startedAt": "2026-05-21T15:05:25.475Z",
+    "status": "success",
+    "tasks": [
+      "products"
+    ],
+    "dryRun": true,
+    "endedAt": "2026-05-21T15:05:34.110Z",
+    "duration": 9,
+    "summary": {
+      "totalSuccess": 1,
+      "totalFailed": 0,
+      "byTask": {
+        "Products": {
+          "success": 1,
+          "failed": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "3745a8f5-2367-4f78-83a7-f6de4c0ca4e8",
+    "startedAt": "2026-05-21T14:51:17.313Z",
+    "status": "success",
+    "tasks": [
+      "categories",
+      "products",
+      "customers",
+      "inventory"
+    ],
+    "dryRun": true,
+    "endedAt": "2026-05-21T14:52:16.306Z",
+    "duration": 59,
+    "summary": {
+      "totalSuccess": 13929,
+      "totalFailed": 0,
+      "byTask": {
+        "Categories": {
+          "success": 195,
+          "failed": 0
+        },
+        "Products": {
+          "success": 1,
+          "failed": 0
+        },
+        "Customers": {
+          "success": 9055,
+          "failed": 0
+        },
+        "Inventory": {
+          "success": 4678,
+          "failed": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "e33990d2-2c20-4cca-b351-cd7cbd3f3838",
+    "startedAt": "2026-05-21T14:15:45.107Z",
+    "status": "success",
+    "tasks": [
+      "products"
+    ],
+    "dryRun": true,
+    "endedAt": "2026-05-21T14:16:06.486Z",
+    "duration": 21,
+    "summary": {
+      "totalSuccess": 730,
+      "totalFailed": 0,
+      "byTask": {
+        "Products": {
+          "success": 730,
+          "failed": 0
+        }
+      }
+    }
+  },
+  {
+    "id": "e1217dd3-ed8b-4349-8475-2d817d305ac4",
+    "startedAt": "2026-05-21T13:59:10.831Z",
+    "status": "success",
+    "tasks": [
+      "products"
+    ],
+    "dryRun": true,
+    "endedAt": "2026-05-21T13:59:19.022Z",
+    "duration": 8,
+    "summary": {
+      "totalSuccess": 0,
+      "totalFailed": 0,
+      "byTask": {}
+    }
+  },
+  {
+    "id": "374e3ec9-404c-404b-9d8e-8042b3f0245d",
+    "startedAt": "2026-05-21T13:55:36.777Z",
+    "status": "success",
+    "tasks": [
+      "products"
+    ],
+    "dryRun": true,
+    "endedAt": "2026-05-21T13:55:44.606Z",
+    "duration": 8,
+    "summary": {
+      "totalSuccess": 0,
+      "totalFailed": 0,
+      "byTask": {}
+    }
+  },
+  {
+    "id": "1173d20e-67ec-49a8-81db-58f4acdf614c",
+    "startedAt": "2026-05-21T13:54:27.228Z",
+    "status": "success",
+    "tasks": [
+      "products"
+    ],
+    "dryRun": false,
+    "endedAt": "2026-05-21T13:54:35.494Z",
+    "duration": 8,
+    "summary": {
+      "totalSuccess": 0,
+      "totalFailed": 0,
+      "byTask": {}
+    }
+  },
+  {
+    "id": "bebd3c6c-8bfc-40c5-be0d-bcc76a5c08ef",
+    "startedAt": "2026-05-21T13:52:07.216Z",
+    "status": "success",
+    "tasks": [
+      "products"
+    ],
+    "dryRun": true,
+    "endedAt": "2026-05-21T13:52:31.295Z",
+    "duration": 24,
+    "summary": {
+      "totalSuccess": 0,
+      "totalFailed": 0,
+      "byTask": {}
+    }
+  },
+  {
+    "id": "c835dd3f-94ab-4884-a895-6c06ab468fdc",
+    "startedAt": "2026-05-12T14:42:40.808Z",
+    "status": "failed",
+    "tasks": [
+      "products"
+    ],
+    "dryRun": true,
+    "endedAt": "2026-05-12T14:43:01.281Z",
+    "duration": 20,
+    "summary": {
+      "totalSuccess": 0,
+      "totalFailed": 0,
+      "byTask": {}
+    }
+  }
+]

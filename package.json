@@ -1,0 +1,37 @@
+{
+  "name": "sfcc-migration-tool",
+  "version": "1.0.0",
+  "description": "Migration tool: Generic REST API → Salesforce B2C OCAPI v22.10",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "migrate:all": "node src/index.js categories products customers inventory",
+    "migrate:products": "node src/index.js categories products",
+    "migrate:customers": "node src/index.js customers",
+    "migrate:inventory": "node src/index.js inventory",
+    "dry-run": "cross-env DRY_RUN=true node src/index.js",
+    "web": "cd web && npm run dev",
+    "web:build": "cd web && npm run build",
+    "web:start": "cd web && npm run start"
+  },
+  "keywords": [
+    "sfcc",
+    "salesforce",
+    "ocapi",
+    "migration"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.16.0",
+    "chalk": "^4.1.2",
+    "cli-progress": "^3.12.0",
+    "dotenv": "^17.4.2",
+    "p-limit": "^3.1.0",
+    "p-retry": "^4.6.2",
+    "winston": "^3.19.0"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0"
+  }
+}

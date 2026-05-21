@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(node --check src/index.js)",
+      "Bash(node --check src/config/index.js)",
+      "Bash(node --check src/migrations/migrateProducts.js)",
+      "Bash(node --check src/migrations/migrateCustomers.js)",
+      "Bash(node --check src/migrations/migrateInventory.js)",
+      "Bash(code C:\\\\SFCC\\\\Projects\\\\Migration Tool *)",
+      "Bash(npx tsc *)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(node node_modules/typescript/bin/tsc --noEmit)",
+      "Bash(node node_modules/next/dist/bin/next build)",
+      "Bash(pkill -f \"next\")",
+      "Bash(pkill -f \"node_modules/next\")",
+      "Bash(node src/index.js --tasks=products --key=ct1001)",
+      "Bash(node -e ' *)"
+    ]
+  }
+}
