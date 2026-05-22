@@ -13,14 +13,37 @@ function parseJwtExpiry(jwt) {
   }
 }
 
-async function renewToken(currentToken) {
-  const { clientId, clientSecret, amAuthUrl } = config.sfcc;
+// BM User Grant — exchanges BM admin credentials + client_id for an OCAPI-capable token
+// This is the correct token type for SFCC OCAPI Data API
+async function fetchBMToken() {
+  const { baseUrl, clientId, bmUsername, bmPassword } = config.sfcc;
+  if (!bmUsername || !bmPassword) {
+    throw new Error('SFCC_BM_USERNAME and SFCC_BM_PASSWORD are not set in config');
+  }
+  const credentials = Buffer.from(`${bmUsername}:${bmPassword}`).toString('base64');
   const res = await axios.post(
-    amAuthUrl,
-    `grant_type=client_credentials&client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}`,
+    `${baseUrl}/dw/oauth2/access_token?client_id=${encodeURIComponent(clientId)}`,
+    `grant_type=urn:demandware:params:oauth:grant-type:client:credentials`,
     {
       headers: {
-        Authorization: `Bearer ${currentToken}`,
+        Authorization: `Basic ${credentials}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    }
+  );
+  return res.data.access_token;
+}
+
+// AM endpoint with Basic auth — fallback for environments that accept AM tokens
+async function fetchAMToken() {
+  const { clientId, clientSecret, amAuthUrl } = config.sfcc;
+  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+  const res = await axios.post(
+    amAuthUrl,
+    `grant_type=urn:demandware:params:oauth:grant-type:client:credentials`,
+    {
+      headers: {
+        Authorization: `Basic ${credentials}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
     }
@@ -31,37 +54,61 @@ async function renewToken(currentToken) {
 async function getSFCCToken() {
   const now = Date.now();
 
-  // Use cached token if still valid (>60s left)
+  // Return cached token if more than 60s left
   if (tokenCache.token && now < tokenCache.expiresAt - 60000) {
     return tokenCache.token;
   }
 
-  const { accessToken } = config.sfcc;
-  if (!accessToken) {
-    throw new Error(
-      'SFCC_ACCESS_TOKEN is not set. Paste your Bearer token in the Config page under "Access Token".'
-    );
-  }
-
-  // If cache empty, seed from env token
+  // Seed from env if cache is empty
   if (!tokenCache.token) {
-    tokenCache.token = accessToken;
-    tokenCache.expiresAt = parseJwtExpiry(accessToken) || now + 1800000;
-  }
-
-  // Try to renew if < 5 min left
-  if (now >= tokenCache.expiresAt - 300000) {
-    try {
-      const renewed = await renewToken(tokenCache.token);
-      const exp = parseJwtExpiry(renewed) || now + 1800000;
-      tokenCache = { token: renewed, expiresAt: exp };
-      logger.info('SFCC token renewed successfully');
-    } catch (err) {
-      logger.warn(`Token renewal failed: ${err.message} — using existing token`);
+    const { accessToken } = config.sfcc;
+    if (accessToken) {
+      tokenCache.token = accessToken;
+      tokenCache.expiresAt = parseJwtExpiry(accessToken) || now + 1800000;
     }
   }
 
-  return tokenCache.token;
+  // Token still valid (>60s) — use it
+  if (tokenCache.token && now < tokenCache.expiresAt - 60000) {
+    return tokenCache.token;
+  }
+
+  // Token expired or not set — renew via BM User Grant (produces OCAPI-capable token)
+  logger.info('SFCC token expired or not set — renewing via BM User Grant...');
+
+  try {
+    const fresh = await fetchBMToken();
+    const exp = parseJwtExpiry(fresh) || now + 1800000;
+    tokenCache = { token: fresh, expiresAt: exp };
+    logger.info(`SFCC token renewed via BM User Grant. Valid for ${Math.round((exp - now) / 60000)} min.`);
+    return tokenCache.token;
+  } catch (bmErr) {
+    logger.warn(`BM User Grant failed (${bmErr.message}) — trying AM fallback...`);
+  }
+
+  try {
+    const fresh = await fetchAMToken();
+    const exp = parseJwtExpiry(fresh) || now + 1800000;
+    tokenCache = { token: fresh, expiresAt: exp };
+    logger.info(`SFCC token renewed via AM. Valid for ${Math.round((exp - now) / 60000)} min.`);
+    return tokenCache.token;
+  } catch (amErr) {
+    logger.warn(`AM fallback also failed (${amErr.message})`);
+  }
+
+  // Both failed — use existing token if any time left
+  if (tokenCache.token) {
+    const remaining = Math.max(0, Math.floor((tokenCache.expiresAt - now) / 1000));
+    if (remaining > 0) {
+      logger.warn(`Both renewal methods failed — using existing token (${remaining}s left)`);
+      return tokenCache.token;
+    }
+  }
+
+  throw new Error(
+    'SFCC token expired and all renewal methods failed. ' +
+    'Check SFCC_BM_USERNAME and SFCC_BM_PASSWORD in your config.'
+  );
 }
 
 async function getSFCCHeaders() {
@@ -69,7 +116,6 @@ async function getSFCCHeaders() {
   return {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
-    'x-dw-client-id': config.sfcc.clientId,
   };
 }
 

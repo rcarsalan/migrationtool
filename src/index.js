@@ -23,8 +23,11 @@ async function run() {
     const keyArg = rawArgs[keyArgIndex];
     filterKey = keyArg.includes('=') ? keyArg.split('=')[1] : rawArgs[keyArgIndex + 1];
   }
+  // Support both: "node index.js products" and "node index.js --tasks=products"
+  const tasksArg = rawArgs.find((a) => a.startsWith('--tasks='));
+  const tasksList = tasksArg ? tasksArg.split('=')[1].split(',') : null;
   const args = rawArgs.filter((a) => !a.startsWith('--'));
-  const selectedTasks = args.length > 0 ? args : Object.keys(TASKS);
+  const selectedTasks = tasksList || (args.length > 0 ? args : Object.keys(TASKS));
 
   console.log(chalk.bold.blue('\n========================================'));
   console.log(chalk.bold.blue(`   SFCC Migration Tool - OCAPI ${config.sfcc.version}  `));

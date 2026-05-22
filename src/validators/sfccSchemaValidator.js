@@ -15,8 +15,8 @@ async function getAMHeaders() {
 }
 
 function metaUrl(path) {
-  const { baseUrl, version } = config.sfcc;
-  return `${baseUrl}/s/-/dw/data/${version}${path}`;
+  const { baseUrl, version, clientId } = config.sfcc;
+  return `${baseUrl}/s/-/dw/data/${version}${path}?client_id=${encodeURIComponent(clientId)}`;
 }
 
 async function fetchSFCCAttributes(objectType) {

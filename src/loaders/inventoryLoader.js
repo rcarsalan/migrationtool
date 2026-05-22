@@ -5,8 +5,8 @@ const { withRetry } = require('../utils/httpClient');
 const logger = require('../utils/logger');
 
 function ocapiUrl(path) {
-  const { baseUrl, version } = config.sfcc;
-  return `${baseUrl}/s/-/dw/data/${version}${path}`;
+  const { baseUrl, version, clientId } = config.sfcc;
+  return `${baseUrl}/s/-/dw/data/${version}${path}?client_id=${encodeURIComponent(clientId)}`;
 }
 
 async function ensureInventoryList(inventoryList) {
