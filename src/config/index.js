@@ -14,10 +14,14 @@ module.exports = {
     baseUrl: process.env.SFCC_BASE_URL,
     clientId: process.env.SFCC_CLIENT_ID,
     clientSecret: process.env.SFCC_CLIENT_SECRET,
+    bmClientId: process.env.SFCC_BM_CLIENT_ID || 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     siteId: process.env.SFCC_SITE_ID || 'RefArch',
     version: process.env.SFCC_VERSION || 'v22_10',
+    metaVersion: process.env.SFCC_META_VERSION || 'v25_6',
     amAuthUrl: process.env.SFCC_AM_AUTH_URL || 'https://account.demandware.com/dwsso/oauth2/access_token',
     accessToken: process.env.SFCC_ACCESS_TOKEN || '',
+    bmUsername: process.env.SFCC_BM_USERNAME || '',
+    bmPassword: process.env.SFCC_BM_PASSWORD || '',
   },
 
   migration: {

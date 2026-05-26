@@ -6,8 +6,8 @@ const { logCustomerDiff } = require('../utils/diffLogger');
 const logger = require('../utils/logger');
 
 function ocapiUrl(path) {
-  const { baseUrl, version, clientId } = config.sfcc;
-  return `${baseUrl}/s/-/dw/data/${version}${path}?client_id=${encodeURIComponent(clientId)}`;
+  const { baseUrl, version, bmClientId } = config.sfcc;
+  return `${baseUrl}/s/-/dw/data/${version}${path}?client_id=${encodeURIComponent(bmClientId)}`;
 }
 
 async function searchCustomerByEmail(email) {

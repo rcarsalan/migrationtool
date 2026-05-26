@@ -2,47 +2,57 @@ const axios = require('axios');
 const config = require('../config');
 const { withRetry } = require('../utils/httpClient');
 const logger = require('../utils/logger');
-
 const { getSFCCToken } = require('../loaders/sfccAuth');
 
-async function getAMHeaders() {
+const PAGE_SIZE = 200;
+
+async function getHeaders() {
   const token = await getSFCCToken();
   return {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
-    'x-dw-client-id': config.sfcc.clientId,
   };
 }
 
 function metaUrl(path) {
-  const { baseUrl, version, clientId } = config.sfcc;
-  return `${baseUrl}/s/-/dw/data/${version}${path}?client_id=${encodeURIComponent(clientId)}`;
+  const { baseUrl, metaVersion, bmClientId } = config.sfcc;
+  return `${baseUrl}/s/-/dw/data/${metaVersion}${path}?client_id=${encodeURIComponent(bmClientId)}`;
 }
 
-async function fetchSFCCAttributes(objectType) {
-  const headers = await getAMHeaders();
-  const url = metaUrl(`/system_object_definitions/${objectType}/attribute_definitions`);
+// GET all existing attribute definitions for an object type (handles pagination)
+async function fetchAllSFCCAttributes(objectType) {
+  const headers = await getHeaders();
+  const basePath = `/system_object_definitions/${objectType}/attribute_definitions`;
+  const ids = new Set();
+  let start = 0;
+  let total = null;
 
-  let res;
-  try {
-    res = await withRetry(
-      () => axios.get(url, {
+  logger.info(`Fetching existing SFCC ${objectType} attribute definitions...`);
+
+  do {
+    const res = await withRetry(
+      () => axios.get(metaUrl(basePath), {
         headers,
-        params: { count: 200 },
+        params: { count: PAGE_SIZE, start },
       }),
-      `fetch ${objectType} attribute definitions`
+      `fetch ${objectType} attributes (start=${start})`
     );
-  } catch (err) {
-    const status = err.response?.status;
-    const body = JSON.stringify(err.response?.data || {});
-    logger.error(`Schema fetch failed (${status}) for ${objectType}: ${body}`);
-    logger.error(`URL attempted: ${url}`);
-    throw err;
-  }
 
-  const defs = res.data.data || [];
-  const ids = new Set(defs.map((d) => d.id));
-  logger.info(`SFCC ${objectType}: ${ids.size} existing attributes found`);
+    const data = res.data;
+    if (total === null) {
+      total = data.total || 0;
+      logger.info(`SFCC ${objectType}: ${total} total attribute definitions`);
+    }
+
+    const page = data.data || [];
+    for (const attr of page) {
+      ids.add(attr.id);
+    }
+
+    start += PAGE_SIZE;
+  } while (start < total);
+
+  logger.info(`SFCC ${objectType}: loaded ${ids.size} attribute IDs`);
   return ids;
 }
 
@@ -52,16 +62,18 @@ function inferAttributeType(value) {
   return 'string';
 }
 
+// PUT — create a single custom attribute definition
 async function createCustomAttribute(objectType, attributeId, sampleValue) {
-  const headers = await getAMHeaders();
+  const headers = await getHeaders();
   const typeId = inferAttributeType(sampleValue);
+  const path = `/system_object_definitions/${objectType}/attribute_definitions/${encodeURIComponent(attributeId)}`;
 
   await withRetry(
     () => axios.put(
-      metaUrl(`/system_object_definitions/${objectType}/attribute_definitions/${encodeURIComponent(attributeId)}`),
+      metaUrl(path),
       {
         id: attributeId,
-        type: { id: typeId },
+        value_type: typeId,
         mandatory: false,
         searchable: false,
         externally_defined: false,
@@ -74,12 +86,28 @@ async function createCustomAttribute(objectType, attributeId, sampleValue) {
     `create attribute ${attributeId} on ${objectType}`
   );
 
-  logger.info(`Custom attribute created: ${objectType}.${attributeId} (type: ${typeId})`);
+  logger.info(`Created: ${objectType}.${attributeId} (type: ${typeId})`);
 }
 
-// Main function: collect unique attributes from transformed records,
-// check which ones exist in SFCC, create any that are missing.
+// Main entry point called by migrateProducts before upserting records.
+// Flow:
+//   1. GET all existing SFCC attributes (paginated)
+//   2. Collect all attribute IDs needed by the transformed records
+//   3. PUT any that are missing
 async function validateAndEnsureAttributes(objectType, transformedRecords, attributeKey = 'custom_attributes') {
+  // Step 1 — GET existing attributes from SFCC
+  let existingIds;
+  try {
+    existingIds = await fetchAllSFCCAttributes(objectType);
+  } catch (err) {
+    const status = err.response?.status;
+    const detail = JSON.stringify(err.response?.data || err.message);
+    logger.warn(`Schema validation skipped — GET system_object_definitions failed (${status}: ${detail})`);
+    logger.warn('Products will be sent as-is. SFCC may reject records with undefined custom attributes.');
+    return;
+  }
+
+  // Step 2 — Collect all unique attribute IDs needed from CTP-transformed data
   const candidateMap = new Map();
   for (const record of transformedRecords) {
     const attrs = record[attributeKey];
@@ -92,31 +120,21 @@ async function validateAndEnsureAttributes(objectType, transformedRecords, attri
   }
 
   if (candidateMap.size === 0) {
-    logger.info(`No custom attributes found for ${objectType} — skipping schema validation`);
+    logger.info(`No custom attributes to validate for ${objectType}`);
     return;
   }
 
-  logger.info(`Validating ${candidateMap.size} unique custom attributes for SFCC ${objectType}...`);
+  logger.info(`${objectType}: ${candidateMap.size} unique custom attributes needed from CTP data`);
 
-  let existingIds;
-  try {
-    existingIds = await fetchSFCCAttributes(objectType);
-  } catch (err) {
-    const status = err.response?.status;
-    const detail = JSON.stringify(err.response?.data || err.message);
-    logger.warn(`Schema validation skipped — could not reach SFCC system_object_definitions (${status}: ${detail})`);
-    logger.warn(`Custom attributes will be sent as-is. SFCC may reject records with undefined attributes.`);
-    return;
-  }
-
+  // Step 3 — Diff and PUT missing attributes
   const missing = [...candidateMap.entries()].filter(([id]) => !existingIds.has(id));
 
   if (missing.length === 0) {
-    logger.info(`All ${objectType} attributes already exist in SFCC — no changes needed`);
+    logger.info(`All ${objectType} custom attributes already exist in SFCC — no creation needed`);
     return;
   }
 
-  logger.info(`Creating ${missing.length} missing custom attributes on SFCC ${objectType}...`);
+  logger.info(`Creating ${missing.length} missing attribute(s) on SFCC ${objectType}...`);
 
   for (const [attributeId, sampleValue] of missing) {
     try {
@@ -124,7 +142,7 @@ async function validateAndEnsureAttributes(objectType, transformedRecords, attri
     } catch (err) {
       const status = err.response?.status;
       const detail = JSON.stringify(err.response?.data || err.message);
-      logger.warn(`Could not create attribute ${objectType}.${attributeId} (${status}: ${detail}) — skipping`);
+      logger.warn(`Could not create ${objectType}.${attributeId} (${status}: ${detail}) — skipping`);
     }
   }
 

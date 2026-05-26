@@ -21,13 +21,29 @@ function createClient(baseUrl, headers = {}) {
 }
 
 async function withRetry(fn, label = 'request') {
-  return pRetry(fn, {
-    retries: config.migration.retryAttempts,
-    minTimeout: config.migration.retryDelay,
-    onFailedAttempt: (err) => {
-      logger.warn(`${label} attempt ${err.attemptNumber} failed. Retrying... (${err.retriesLeft} left)`);
+  return pRetry(
+    async () => {
+      try {
+        return await fn();
+      } catch (err) {
+        const status = err.response?.status;
+        // Do not retry 4xx — preserve original response on the abort error
+        if (status && status >= 400 && status < 500) {
+          const abort = new pRetry.AbortError(err.message);
+          abort.response = err.response;
+          throw abort;
+        }
+        throw err;
+      }
     },
-  });
+    {
+      retries: config.migration.retryAttempts,
+      minTimeout: config.migration.retryDelay,
+      onFailedAttempt: (err) => {
+        logger.warn(`${label} attempt ${err.attemptNumber} failed. Retrying... (${err.retriesLeft} left)`);
+      },
+    }
+  );
 }
 
 module.exports = { createClient, withRetry };
