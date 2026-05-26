@@ -25,23 +25,27 @@ async function migrateCategories(_filterKey = null) {
 
 async function migrateProducts(filterKey = null) {
   logger.info('=== Starting Product Migration ===');
+
+  // Phase 1 — Extract from Commercetools + Transform
+  logger.info('--- Phase 1: Extracting products from Commercetools ---');
   const raw = await extractProducts(filterKey);
   const products = raw.map(transformProduct);
+  logger.info(`Extracted and transformed ${products.length} product(s)`);
 
+  // Phase 2 — Schema validation: GET existing SFCC attributes, PUT any missing ones
   if (!config.migration.dryRun) {
-    logger.info('--- Schema Validation: Products ---');
+    logger.info('--- Phase 2: Schema validation (system_object_definitions v25_6) ---');
     await validateAndEnsureAttributes('Product', products);
   } else {
-    logger.info('--- Schema Validation: skipped in DRY RUN ---');
+    logger.info('--- Phase 2: Schema validation skipped (DRY RUN) ---');
   }
 
+  // Phase 3 — Upsert products into SFCC
+  logger.info('--- Phase 3: Upserting products into SFCC ---');
   const results = await processBatches(
     products,
     async (product) => {
       await upsertProduct(product);
-      if (product.primary_category_id) {
-        await assignProductToCategory(product.id, product.primary_category_id, CATALOG_ID);
-      }
     },
     'products'
   );

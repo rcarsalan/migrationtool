@@ -5,14 +5,19 @@ const { withRetry } = require('../utils/httpClient');
 const { logProductDiff } = require('../utils/diffLogger');
 const logger = require('../utils/logger');
 
+const CATALOG_ID = process.env.SFCC_CATALOG_ID || 'storefront-catalog-en';
+
 function ocapiUrl(path) {
-  const { baseUrl, version, clientId } = config.sfcc;
-  return `${baseUrl}/s/-/dw/data/${version}${path}?client_id=${encodeURIComponent(clientId)}`;
+  const { baseUrl, version, bmClientId } = config.sfcc;
+  return `${baseUrl}/s/-/dw/data/${version}${path}?client_id=${encodeURIComponent(bmClientId)}`;
 }
 
 function toOcapiPayload(product) {
   const { custom_attributes, ...rest } = product;
-  const payload = { ...rest };
+  const payload = {
+    ...rest,
+    owning_catalog_id: CATALOG_ID,
+  };
   if (Array.isArray(custom_attributes)) {
     for (const { attribute_id, value } of custom_attributes) {
       if (attribute_id) payload[`c_${attribute_id}`] = value;
@@ -29,11 +34,22 @@ async function upsertProduct(product) {
 
   const headers = await getSFCCHeaders();
   const payload = toOcapiPayload(product);
+
+  const customCount = product.custom_attributes?.length || 0;
+  logger.info(`Upserting product: [${product.id}] "${product.name?.default || ''}"`);
+  logger.info(`  catalog: ${CATALOG_ID} | online: ${product.online} | custom attributes: ${customCount}`);
+  if (product.custom_attributes?.length) {
+    const attrList = product.custom_attributes
+      .map(({ attribute_id, value }) => `    • c_${attribute_id}: ${JSON.stringify(value)}`)
+      .join('\n');
+    logger.info(`  Custom Attributes:\n${attrList}`);
+  }
+
   await withRetry(
     () => axios.put(ocapiUrl(`/products/${encodeURIComponent(product.id)}`), payload, { headers }),
     `upsert product ${product.id}`
   );
-  logger.debug(`Product upserted: ${product.id}`);
+  logger.info(`Product saved to SFCC: ${product.id}`);
 }
 
 async function upsertCategory(category, catalogId) {
