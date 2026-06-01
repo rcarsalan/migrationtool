@@ -5,12 +5,14 @@ const config = require('./config');
 const { migrateCategories, migrateProducts } = require('./migrations/migrateProducts');
 const { migrateCustomers } = require('./migrations/migrateCustomers');
 const { migrateInventory } = require('./migrations/migrateInventory');
+const { migrateSchema } = require('./migrations/migrateSchema');
 
 const TASKS = {
   categories: migrateCategories,
   products: migrateProducts,
   customers: migrateCustomers,
   inventory: migrateInventory,
+  schema: migrateSchema,
 };
 
 async function run() {
